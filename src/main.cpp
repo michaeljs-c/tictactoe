@@ -2,35 +2,50 @@
 #include <string>
 #include "game_utils.h"
 
-int main() {
-    char board[][3] = {{'-','-','-'}, {'-','-','-'}, {'-','-','-'}};
-    // int len = sizeof(board)/sizeof(board[0]);
-    std::cout << "Welcome to tictactoe" << std::endl;
-    printBoard(board);
+
+void playGame(Player& player1, Player& player2) {
+    Board board = Board();
     
-    char player = 'X';
+    Player* next_player = &player1;
+    
+    std::cout << "Welcome to tictactoe" << std::endl;
+    std::cout << "Player " << player1.symbol << ", enter position <row,col>: ";
+    board.printBoard();
 
     while (true) {
-        std::cout << "Player " << player << ", enter position <row,col>: ";
-        Position position = getPosition();
-        if (validateMove(board, position) && position.row != -1) {
-            board[position.row][position.col] = player;
-            printBoard(board);
+        std::cout << "Player " << next_player->symbol << ", enter position <row,col>: ";
+        Position position = next_player->getPosition(board);
+        if (board.validateMove(position) && position.row != -1) {
+            board.setPosition(position, next_player->symbol);
+            board.printBoard();
 
-            if (checkWin(board, player)) {
-                std::cout << "Player " << player << " wins!" << std::endl;
+            if (board.checkWin(next_player->symbol)) {
+                std::cout << "Player " << next_player->symbol << " wins!" << std::endl;
                 break;
             }
-            if (isGameOver(board)) {
+            else if (board.isGameOver()) {
                 std::cout << "It's a draw!" << std::endl;
                 break;
             }
 
-            player = (player == 'X') ? 'O': 'X';
+            if (next_player->symbol == player1.symbol) {
+                next_player = &player2;
+            }
+            else {
+                next_player = &player1;
+            }
+
         } 
         else {
             std::cout << "Invalid move, please enter again" << std::endl;
         }
     }
+}
+int main() {
+    AIPlayer player1 = AIPlayer('X');
+    HumanPlayer player2 = HumanPlayer('O');
+
+    playGame(player1, player2);
+
 }
 
