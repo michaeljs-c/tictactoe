@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>  
+#include <chrono>
 
 struct Position {
     int row;
@@ -15,7 +16,6 @@ struct Position {
         this->row = -1;
         this->col = -1;
     }
-    
 };
 
 
@@ -44,58 +44,35 @@ class Board {
 
         void printBoard() {
             std::cout << std::endl;
+            std::cout << " -----------" << std::endl;
             for (int i = 0; i < 3; ++i) {
-
                 for (int j = 0; j < 3; ++j){
-                        std::cout << " " << board[i][j] << " ";
+                    std::cout << "| " << board[i][j] << " ";
                 }
-                std::cout << std::endl;
+                std::cout << "|" << std::endl;
+                std::cout << " -----------" << std::endl;
             }
             std::cout << std::endl;
         }
 
         bool checkWin(char player) {
             return (
-                (
-                    board[0][0] == player &&
-                    board[0][1] == player &&
-                    board[0][2] == player
-                ) ||
-                (
-                    board[1][0] == player &&
-                    board[1][1] == player &&
-                    board[1][2] == player
-                ) ||
-                (
-                    board[2][0] == player &&
-                    board[2][1] == player &&
-                    board[2][2] == player
-                ) ||
-                (
-                    board[0][0] == player &&
-                    board[1][0] == player &&
-                    board[2][0] == player
-                ) ||
-                (
-                    board[0][1] == player &&
-                    board[1][1] == player &&
-                    board[2][1] == player
-                ) ||
-                (
-                    board[0][2] == player &&
-                    board[1][2] == player &&
-                    board[2][2] == player
-                ) ||
-                (
-                    board[0][0] == player &&
-                    board[1][1] == player &&
-                    board[2][2] == player
-                ) ||
-                (
-                    board[0][2] == player &&
-                    board[1][1] == player &&
-                    board[2][0] == player
-                )
+                // horizontal top
+                (board[0][0] == player && board[0][1] == player && board[0][2] == player) ||
+                // horizontal middle
+                (board[1][0] == player && board[1][1] == player && board[1][2] == player) ||
+                // horizontal top
+                (board[2][0] == player && board[2][1] == player && board[2][2] == player) ||
+                // vertical left
+                (board[0][0] == player && board[1][0] == player && board[2][0] == player) ||
+                // vertical middle
+                (board[0][1] == player && board[1][1] == player && board[2][1] == player) ||
+                // vertical right
+                (board[0][2] == player && board[1][2] == player && board[2][2] == player) ||
+                // diagonal right
+                (board[0][0] == player && board[1][1] == player && board[2][2] == player) ||
+                // diagonal left
+                (board[0][2] == player && board[1][1] == player && board[2][0] == player)
             );
         }
 
@@ -133,10 +110,8 @@ class Board {
                 for (int j=0; j<3; ++j) {
                     if (board[i][j] == 'X') {
                         ++x_count;
-
                     }
-                    else if (board[i][j] == 'O')
-                    {
+                    else if (board[i][j] == 'O') {
                         ++o_count;
                     }
                 }
@@ -155,35 +130,8 @@ class Board {
             }
             return moves;
         }
-
-
 };
 
-
-class Player {
-    public:
-        char symbol;
-
-        Player(char symbol) {
-            this->symbol = symbol;
-        }
-
-        virtual Position getPosition(Board board) {
-            Position position{-1,-1};
-            return position;
-        }
-        
-};
-
-struct ActionValue {
-    int value;
-    Position position;
-
-    ActionValue(int value, Position position) {
-        this->value = value;
-        this->position = position;
-    }
-};
 
 class MiniMax {
     public:
@@ -200,70 +148,91 @@ class MiniMax {
     }
 
     Position minimax(Board board) {
+        // start time
+        auto start = std::chrono::high_resolution_clock::now();
+        
+        // minimax
         if (board.nextPlayer() == 'X') {
-            max_value(board);
+            min_max_value(board, "max", -100, 100);
         }
         else {
-            min_value(board);
+            min_max_value(board, "min", -100, 100);
         }
+        
+        // end time
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << "Time taken: " << (float)duration.count() / 1000000 << "s" << std::endl;
+
         return action;
     }
 
-    int max_value(Board board) {
-        int v = -100;
-        if (board.isGameOver()){
-            return utility(board);
-        }
-        ActionValue max_av = ActionValue(v, Position());
+    int min_max_value(Board board, std::string min_or_max, int alpha, int beta) {
+        int v = (min_or_max == "max")? -100 : 100;
+        if (board.isGameOver()) return utility(board);
+        
+        Position best_position = Position();
+        int best_value = v;
 
         for (Position position: board.getPositions()) {
-            v = std::max(v, min_value(board.resultantBoard(position)));
-            if (v > max_av.value) {
-                max_av.value = v;
-                max_av.position = position;
+            if (min_or_max == "max") {
+                v = std::max(v, min_max_value(board.resultantBoard(position), "min", alpha, beta));    
+                if (v > best_value) {
+                    best_value = v;
+                    best_position = position;
+                }
+                alpha = std::max(best_value, alpha);
+                if (alpha >= beta) break;
             }
+            else {
+                v = std::min(v, min_max_value(board.resultantBoard(position), "max", alpha, beta));
+                if (v < best_value) {
+                    best_value = v;
+                    best_position = position;
+                }
+                beta = std::min(best_value, beta);
+                if (alpha >= beta) break;
+            }   
         }
-        if (max_av.position.row != -1) {
-            this->action = max_av.position;
+        if (best_position.row != -1) {
+            this->action = best_position;
         }
         return v;
     }
+};
 
-    int min_value(Board board) {
-        int v = 100;
-        if (board.isGameOver()){
-            return utility(board);
+class Player {
+    public:
+        char symbol;
+        
+        Player() {};
+        Player(char symbol) {
+            this->symbol = symbol;
         }
-        ActionValue min_av = ActionValue(v, Position());
-
-        for (Position position: board.getPositions()) {
-            v = std::min(v, max_value(board.resultantBoard(position)));
-            if (v < min_av.value) {
-                min_av.value = v;
-                min_av.position = position;
-            }
+        virtual bool human_player() {
+            return true;
         }
-        if (min_av.position.row != -1) {
-            this->action = min_av.position;
+        virtual Position getPosition(Board board) {
+            return Position();
         }
-        return v;
-    }
-
+        
 };
 
 class AIPlayer: public Player {
     public:
-        using Player::Player;
-
+        
+        bool human_player() {
+            return false;
+        }
         Position getPosition(Board board) {
-            Position pos = MiniMax().minimax(board);
-            return pos;
+            return MiniMax().minimax(board);
         }
 };
 
 class HumanPlayer: public Player {
     public:
-        using Player::Player;
+        
+        bool human_player = {true};
 
         Position getUserPosition() {
             std::string pos;
@@ -275,7 +244,7 @@ class HumanPlayer: public Player {
             std::string pos1 = pos.substr(0, delim);
             std::string pos2 = pos.substr(delim+1, len-delim);
             
-            Position position = {-1, -1};
+            Position position = Position();
             
             try {
                 position.row = stoi(pos1);
@@ -289,5 +258,4 @@ class HumanPlayer: public Player {
         Position getPosition(Board board) {
             return getUserPosition();
         }
-            
 };

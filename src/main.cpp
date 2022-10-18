@@ -1,19 +1,26 @@
 #include <iostream>
 #include <string>
-#include "game_utils.h"
+#include "tictactoe.h"
 
 
 void playGame(Player& player1, Player& player2) {
     Board board = Board();
-    
+    player1.symbol = 'X';
+    player2.symbol = 'O';
+
     Player* next_player = &player1;
     
     std::cout << "Welcome to tictactoe" << std::endl;
-    std::cout << "Player " << player1.symbol << ", enter position <row,col>: ";
     board.printBoard();
 
     while (true) {
-        std::cout << "Player " << next_player->symbol << ", enter position <row,col>: ";
+        
+        if (next_player->human_player()) {
+            std::cout << "Player " << next_player->symbol << "'s turn. Enter position <row,col>: ";
+        }
+        else {
+            std::cout << "Player " << next_player->symbol << "'s turn. Bot is thinking... beep boop" << std::endl;
+        }
         Position position = next_player->getPosition(board);
         if (board.validateMove(position) && position.row != -1) {
             board.setPosition(position, next_player->symbol);
@@ -41,11 +48,13 @@ void playGame(Player& player1, Player& player2) {
         }
     }
 }
+
 int main() {
-    AIPlayer player1 = AIPlayer('X');
-    HumanPlayer player2 = HumanPlayer('O');
+    AIPlayer player1 = AIPlayer();
+    HumanPlayer player2 = HumanPlayer();
 
     playGame(player1, player2);
 
+    return 0;
 }
 
